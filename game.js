@@ -15,6 +15,23 @@ const COLORS = [
   '#ffb74d', // L - orange
 ];
 
+// Paleta con más contraste para fondo claro
+const COLORS_LIGHT = [
+  null,
+  '#00acc1', // I
+  '#f9a825', // O
+  '#8e24aa', // T
+  '#43a047', // S
+  '#e53935', // Z
+  '#1e88e5', // J
+  '#fb8c00', // L
+];
+
+const THEMES = {
+  dark:  { colors: COLORS,       grid: '#22222e', ghostAlpha: 0.2 },
+  light: { colors: COLORS_LIGHT, grid: '#e1e3ec', ghostAlpha: 0.35 },
+};
+
 const PIECES = [
   null,
   [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
@@ -39,8 +56,10 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const themeBtn = document.getElementById('theme-toggle');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let theme = 'dark';
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -158,7 +177,7 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
+  const color = THEMES[theme].colors[colorIndex];
   context.globalAlpha = alpha ?? 1;
   context.fillStyle = color;
   context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
@@ -169,7 +188,7 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = THEMES[theme].grid;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -199,7 +218,7 @@ function draw() {
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       if (current.shape[r][c])
-        drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, 0.2);
+        drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, THEMES[theme].ghostAlpha);
 
   // current piece
   for (let r = 0; r < current.shape.length; r++)
@@ -301,4 +320,25 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 
+function applyTheme(t) {
+  theme = t;
+  document.documentElement.dataset.theme = t;
+  themeBtn.textContent = t === 'dark' ? 'Modo claro' : 'Modo oscuro';
+  themeBtn.setAttribute('aria-pressed', String(t === 'light'));
+  // En pausa o game over no hay bucle de dibujo: repintar a mano
+  draw();
+  drawNext();
+}
+
+themeBtn.addEventListener('click', () => {
+  const t = theme === 'dark' ? 'light' : 'dark';
+  applyTheme(t);
+  try { localStorage.setItem('theme', t); } catch (e) {}
+  themeBtn.blur(); // evita que Space/Enter vuelvan a activar el botón
+});
+
 init();
+
+try {
+  if (localStorage.getItem('theme') === 'light') applyTheme('light');
+} catch (e) {}
